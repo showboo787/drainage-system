@@ -8,36 +8,79 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-body{font-family:Arial;padding:15px;background:#f2f4f7;}
-.section{background:white;padding:15px;margin-bottom:15px;border-radius:8px;}
-input{width:100%;padding:8px;margin:5px 0;font-size:16px;}
-button{padding:12px;width:100%;margin-top:10px;font-size:16px;}
-table{border-collapse:collapse;width:100%;margin-top:15px;font-size:14px;}
-th,td{border:1px solid #ccc;padding:5px;text-align:center;}
+body{
+font-family:Arial;
+padding:15px;
+background:#f2f4f7;
+}
+
+.section{
+background:white;
+padding:15px;
+margin-bottom:15px;
+border-radius:8px;
+}
+
+input{
+width:100%;
+padding:8px;
+margin:6px 0;
+font-size:16px;
+}
+
+button{
+padding:12px;
+width:100%;
+margin-top:10px;
+font-size:16px;
+}
+
+table{
+border-collapse:collapse;
+width:100%;
+margin-top:15px;
+font-size:14px;
+}
+
+th,td{
+border:1px solid #ccc;
+padding:5px;
+text-align:center;
+}
 </style>
 </head>
+
 <body>
 
-<h2>水溝施工放樣系統</h2>
+<h2>水溝施工放樣系統（單坡A→B）</h2>
 
 <div class="section">
-總長 L (m)<input type="number" id="length">
-BM 高程<input type="number" id="bm">
-後視 BS<input type="number" id="bs">
+總長 L (m)
+<input id="length">
+
+BM 高程
+<input id="bm">
+
+後視 BS
+<input id="bs">
 </div>
 
 <div class="section">
-<h3>A 點</h3>
-溝底<input type="number" id="A_drain">
-蓋面<input type="number" id="A_cover">
-井底<input type="number" id="A_well">
+<h3>A 點輸入</h3>
+
+蓋面<input id="A_cover">
+牆頂（井底-0.15）<input id="A_wall">
+溝底<input id="A_drain">
+井底<input id="A_well">
 </div>
 
 <div class="section">
-<h3>B 點</h3>
-溝底<input type="number" id="B_drain">
-蓋面<input type="number" id="B_cover">
-井底<input type="number" id="B_well">
+<h3>B 點輸入</h3>
+
+蓋面<input id="B_cover">
+牆頂（井底-0.15）<input id="B_wall">
+溝底<input id="B_drain">
+井底<input id="B_well">
 </div>
 
 <button onclick="calculate()">產生施工表</button>
@@ -47,45 +90,91 @@ BM 高程<input type="number" id="bm">
 <div id="tableArea"></div>
 
 <script>
+
 let tableData=[];
 
-function interp(A,B,L,x){return A+(B-A)/L*x;}
+function interp(A,B,L,x){
+return A+(B-A)/L*x;
+}
 
 function calculate(){
-let L=length.valueAsNumber;
-let bmVal=bm.valueAsNumber;
-let bsVal=bs.valueAsNumber;
-let HI=bmVal+bsVal;
 
-let A_d=A_drain.valueAsNumber;
-let B_d=B_drain.valueAsNumber;
-let A_c=A_cover.valueAsNumber;
-let B_c=B_cover.valueAsNumber;
-let A_w=A_well.valueAsNumber;
-let B_w=B_well.valueAsNumber;
+let L=parseFloat(length.value);
+let BM=parseFloat(bm.value);
+let BS=parseFloat(bs.value);
+
+if(!L || isNaN(L)){
+alert("請輸入總長度");
+return;
+}
+
+let HI=BM+BS;
+
+// ===== A B 點資料 =====
+
+let A_cover=parseFloat(A_cover.value);
+let B_cover=parseFloat(B_cover.value);
+
+let A_well=parseFloat(A_well.value);
+let B_well=parseFloat(B_well.value);
+
+let A_drain=parseFloat(A_drain.value);
+let B_drain=parseFloat(B_drain.value);
+
+// 牆頂 = 井底 - 0.15（15cm）
 
 let step=2.5;
 tableData=[];
-let html="<table><tr><th>樁號</th><th>溝底</th><th>溝底讀尺</th><th>蓋面</th><th>蓋面讀尺</th><th>井底</th><th>井底讀尺</th></tr>";
 
-for(let x=0;x<=L;x+=step){
+let html=`<table>
+<tr>
+<th>樁號</th>
+<th>蓋面高程</th>
+<th>蓋面讀尺</th>
+<th>牆頂高程</th>
+<th>牆頂讀尺</th>
+<th>溝底高程</th>
+<th>溝底讀尺</th>
+<th>井底高程</th>
+<th>井底讀尺</th>
+</tr>`;
 
-let drain=interp(A_d,B_d,L,x);
-let cover=interp(A_c,B_c,L,x);
-let well=interp(A_w,B_w,L,x);
+for(let x=0;x<=L+0.0001;x+=step){
 
-let readDrain=HI-drain;
+let cover=interp(A_cover,B_cover,L,x);
+
+let well=interp(A_well,B_well,L,x);
+
+let wall=well-0.15; // 15cm規則
+
+let drain=interp(A_drain,B_drain,L,x);
+
 let readCover=HI-cover;
+let readWall=HI-wall;
+let readDrain=HI-drain;
 let readWell=HI-well;
 
-tableData.push({樁號:x,溝底:drain,溝底讀尺:readDrain,蓋面:cover,蓋面讀尺:readCover,井底:well,井底讀尺:readWell});
+tableData.push({
+樁號:x,
+蓋面:cover,
+牆頂:wall,
+溝底:drain,
+井底:well,
+蓋面讀尺:readCover,
+牆頂讀尺:readWall,
+溝底讀尺:readDrain,
+井底讀尺:readWell
+});
 
-html+=`<tr>
+html+=`
+<tr>
 <td>${x.toFixed(2)}</td>
-<td>${drain.toFixed(3)}</td>
-<td>${readDrain.toFixed(3)}</td>
 <td>${cover.toFixed(3)}</td>
 <td>${readCover.toFixed(3)}</td>
+<td>${wall.toFixed(3)}</td>
+<td>${readWall.toFixed(3)}</td>
+<td>${drain.toFixed(3)}</td>
+<td>${readDrain.toFixed(3)}</td>
 <td>${well.toFixed(3)}</td>
 <td>${readWell.toFixed(3)}</td>
 </tr>`;
@@ -94,12 +183,12 @@ html+=`<tr>
 html+="</table>";
 tableArea.innerHTML=html;
 
-let totalDrop=B_d-A_d;
+let totalDrop=B_drain-A_drain;
 let perMeter=Math.abs(totalDrop/L*100);
 
 info.innerHTML=
-"<b>儀器高 HI:</b> "+HI.toFixed(3)+" m<br>"+
-"<b>溝底每公尺下降:</b> "+perMeter.toFixed(2)+" cm/m";
+"儀器高 HI : "+HI.toFixed(3)+" m<br>"+
+"溝底每公尺下降 : "+perMeter.toFixed(2)+" cm/m";
 }
 
 function exportExcel(){
@@ -108,6 +197,7 @@ let wb=XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(wb,ws,"施工表");
 XLSX.writeFile(wb,"水溝施工表.xlsx");
 }
+
 </script>
 
 </body>
