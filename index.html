@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>水溝施工放樣系統</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+body{font-family:Arial;padding:15px;background:#f2f4f7;}
+.section{background:white;padding:15px;margin-bottom:15px;border-radius:8px;}
+input{width:100%;padding:8px;margin:5px 0;font-size:16px;}
+button{padding:12px;width:100%;margin-top:10px;font-size:16px;}
+table{border-collapse:collapse;width:100%;margin-top:15px;font-size:14px;}
+th,td{border:1px solid #ccc;padding:5px;text-align:center;}
+</style>
+</head>
+<body>
+
+<h2>水溝施工放樣系統</h2>
+
+<div class="section">
+總長 L (m)<input type="number" id="length">
+BM 高程<input type="number" id="bm">
+後視 BS<input type="number" id="bs">
+</div>
+
+<div class="section">
+<h3>A 點</h3>
+溝底<input type="number" id="A_drain">
+蓋面<input type="number" id="A_cover">
+井底<input type="number" id="A_well">
+</div>
+
+<div class="section">
+<h3>B 點</h3>
+溝底<input type="number" id="B_drain">
+蓋面<input type="number" id="B_cover">
+井底<input type="number" id="B_well">
+</div>
+
+<button onclick="calculate()">產生施工表</button>
+<button onclick="exportExcel()">下載 Excel</button>
+
+<div id="info"></div>
+<div id="tableArea"></div>
+
+<script>
+let tableData=[];
+
+function interp(A,B,L,x){return A+(B-A)/L*x;}
+
+function calculate(){
+let L=length.valueAsNumber;
+let bmVal=bm.valueAsNumber;
+let bsVal=bs.valueAsNumber;
+let HI=bmVal+bsVal;
+
+let A_d=A_drain.valueAsNumber;
+let B_d=B_drain.valueAsNumber;
+let A_c=A_cover.valueAsNumber;
+let B_c=B_cover.valueAsNumber;
+let A_w=A_well.valueAsNumber;
+let B_w=B_well.valueAsNumber;
+
+let step=2.5;
+tableData=[];
+let html="<table><tr><th>樁號</th><th>溝底</th><th>溝底讀尺</th><th>蓋面</th><th>蓋面讀尺</th><th>井底</th><th>井底讀尺</th></tr>";
+
+for(let x=0;x<=L;x+=step){
+
+let drain=interp(A_d,B_d,L,x);
+let cover=interp(A_c,B_c,L,x);
+let well=interp(A_w,B_w,L,x);
+
+let readDrain=HI-drain;
+let readCover=HI-cover;
+let readWell=HI-well;
+
+tableData.push({樁號:x,溝底:drain,溝底讀尺:readDrain,蓋面:cover,蓋面讀尺:readCover,井底:well,井底讀尺:readWell});
+
+html+=`<tr>
+<td>${x.toFixed(2)}</td>
+<td>${drain.toFixed(3)}</td>
+<td>${readDrain.toFixed(3)}</td>
+<td>${cover.toFixed(3)}</td>
+<td>${readCover.toFixed(3)}</td>
+<td>${well.toFixed(3)}</td>
+<td>${readWell.toFixed(3)}</td>
+</tr>`;
+}
+
+html+="</table>";
+tableArea.innerHTML=html;
+
+let totalDrop=B_d-A_d;
+let perMeter=Math.abs(totalDrop/L*100);
+
+info.innerHTML=
+"<b>儀器高 HI:</b> "+HI.toFixed(3)+" m<br>"+
+"<b>溝底每公尺下降:</b> "+perMeter.toFixed(2)+" cm/m";
+}
+
+function exportExcel(){
+let ws=XLSX.utils.json_to_sheet(tableData);
+let wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"施工表");
+XLSX.writeFile(wb,"水溝施工表.xlsx");
+}
+</script>
+
+</body>
+</html>
